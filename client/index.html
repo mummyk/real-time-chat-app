@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Chat baby</title>
+		<link rel="stylesheet" href="style.css" />
+		<link
+			rel="stylesheet"
+			href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css"
+			integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+			crossorigin="anonymous" />
+		<!--J-Query-->
+		<script
+			src="https://code.jquery.com/jquery-3.7.1.js"
+			integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4="
+			crossorigin="anonymous"></script>
+	</head>
+	<body>
+		<section class="chat_section">
+			<div class="code">
+				<h1>CHAT BABY</h1>
+			</div>
+			<div class="message_area"></div>
+			<div>
+				<textarea
+					name=""
+					id="textarea"
+					cols="30"
+					rows="10"
+					placeholder="Write message"></textarea>
+			</div>
+			<button type="button" id="room-button" class="btn btn-primary">
+				Join room
+			</button>
+		</section>
+		<!-- <script src="http://127.0.0.1:3000/socket.io"></script> -->
+		<script type="module" src="/client.js"></script>
+	</body>
+</html>
