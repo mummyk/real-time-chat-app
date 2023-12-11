@@ -23,14 +23,11 @@ app.use(bodyParser.urlencoded({ extended: false }));
 // Now you can use the key for encryption or decryption
 // ...
 
-// Middleware for authentication
+/****************************************** Middleware for authentication *************************************/
 const authenticateUser = async (req, res, next) => {
 	const userId = req.header("userId");
 	const receiverId = req.header("recieverId"); // Corrected typo in the header name
-
-	if (!receiverId) {
-		return res.status(406).json({ message: "No user with that id" });
-	}
+	const familyName = req.header("family");
 
 	if (!userId) {
 		return res.status(401).json({ message: "Unauthorized: No token provided" });
@@ -39,14 +36,45 @@ const authenticateUser = async (req, res, next) => {
 	try {
 		// Check if a key already exists
 
+		// Check if the it is a family message or it is a single message, by checking if the familyName is empty
+		if (receiverId === "") {
+			getFamilyByName(familyName)
+				.then(async (family) => {
+					const familyid = extractUserInfo(family, ["id", "name"]);
+					req.familyDetails = familyid;
+					getUserfromfamily(familyid.id)
+						.then((userFamily) => {
+							const userfamilyDetail = extractUserInfo(userFamily, [
+								"id",
+								"user_id",
+								"family_id",
+								"status",
+							]);
+							console.log(userfamilyDetail);
+							req.userfamilyDetails = userfamilyDetail;
+						})
+						.catch((error) => {
+							console.error(error);
+						}); // This should log the family details if found
+				})
+				.catch((error) => {
+					console.error(error); // Handle the error if family is not found or there is an issue
+				});
+		} else if (!receiverId) {
+			return res.status(406).json({ message: "No user with that id" });
+		} else {
+			const receiver = await getUserById(receiverId);
+			const receiverInfo = extractUserInfo(receiver, ["id", "name", "email"]);
+			req.receiverInfo = receiverInfo;
+		}
+
 		const sender = await getUserById(userId);
-		const receiver = await getUserById(receiverId);
+		//const receiver = await getUserById(receiverId);
 
 		const senderInfo = extractUserInfo(sender, ["id", "name", "email"]);
-		const receiverInfo = extractUserInfo(receiver, ["id", "name", "email"]);
-
+		//const receiverInfo = extractUserInfo(receiver, ["id", "name", "email"]);
 		req.senderInfo = senderInfo;
-		req.receiverInfo = receiverInfo;
+		//req.receiverInfo = receiverInfo;
 
 		next();
 	} catch (err) {
@@ -55,9 +83,13 @@ const authenticateUser = async (req, res, next) => {
 	}
 };
 
+/**************************************  END *********************************************/
+
+// Connecting to all route
 router.use(authenticateUser);
 
 const sockets = {};
+let familySocketList = [];
 let isOnline = false;
 let isSocketInitialized = false;
 
@@ -66,16 +98,25 @@ io.on("connection", (socket) => {
 
 	const userId = socket.handshake.headers.userid;
 	const receiverId = socket.handshake.headers.recieverid;
-
-	console.log(userId);
 	// Add the socket to the sockets object
 	sockets[userId] = socket.id;
 	console.log(`Socket for user ${userId} added to sockets object`);
-	console.log(sockets);
 
+	// Check if the user is online
 	if (sockets[userId]) {
-		isOnline = true;
+		isOnline == true;
 	}
+
+	// Get all family in the db
+	getAllFamilyName()
+		.then((familyName) => {
+			//const familyNames = extractUserInfo(familyname, ["name"]);
+			familySocketList = extractNameonly(familyName);
+			//console.log(familyName);
+		})
+		.catch((error) => {
+			console.error(error);
+		});
 
 	if (sockets[userId] && sockets[receiverId]) {
 		// Normalize the order of IDs and concatenate
@@ -89,13 +130,17 @@ io.on("connection", (socket) => {
 
 	socket.on("disconnect", () => {
 		console.log(`User ${socket.id}  disconnected`);
-		const userId = Object.keys(sockets).find((key) => sockets[key] === socket);
-		if (userId) {
+		const disconnectedUserId = Object.keys(sockets).find(
+			(key) => sockets[key] === socket
+		);
+		if (disconnectedUserId) {
 			delete sockets[userId];
 			console.log(`User ${userId} disconnected`);
 		}
 	});
 });
+
+/***************************************** All database connections *****************************************/
 
 // Database connection for MongoDB
 const dbUrl = "mongodb://127.0.0.1:27017/realtime_chat";
@@ -118,11 +163,157 @@ const Message = mongoose.model("Message", {
 	},
 });
 
+const FamilyMessage = mongoose.model("FamilyMessage", {
+	sender: String,
+	message: mongoose.Schema.Types.Mixed, // Change the type to Mixed
+	receiver: String,
+	timestamp: {
+		type: Date,
+		default: Date.now,
+	},
+});
+
+function getUserById(userId) {
+	return new Promise((resolve, reject) => {
+		const connection = mysql.createConnection({
+			host: "157.90.167.161",
+			user: "devancestry",
+			password: "6B37rhSkPMWuDOR",
+			database: "devancestry",
+		});
+
+		connection.connect((err) => {
+			if (err) {
+				reject("Error connecting to MySQL");
+			} else {
+				connection.query(
+					"SELECT * FROM users WHERE id = ?",
+					[userId],
+					(queryError, results) => {
+						connection.end(); // Close the connection
+
+						if (queryError) {
+							reject("Error executing SQL query");
+						}
+
+						if (results.length > 0) {
+							resolve(results[0]);
+						} else {
+							reject("User not found");
+						}
+					}
+				);
+			}
+		});
+	});
+}
+
+function getFamilyByName(familyName) {
+	return new Promise((resolve, reject) => {
+		const connection = mysql.createConnection({
+			host: "157.90.167.161",
+			user: "devancestry",
+			password: "6B37rhSkPMWuDOR",
+			database: "devancestry",
+		});
+
+		connection.connect((err) => {
+			if (err) {
+				reject("Error connecting to MySQL");
+			} else {
+				connection.query(
+					"SELECT * FROM families WHERE name = ?",
+					[familyName],
+					(queryError, results) => {
+						connection.end(); // Close the connection
+
+						if (queryError) {
+							reject("Error executing SQL query");
+						}
+
+						if (results.length > 0) {
+							resolve(results[0]);
+						} else {
+							reject("Family not found");
+						}
+					}
+				);
+			}
+		});
+	});
+}
+
+function getAllFamilyName() {
+	return new Promise((resolve, reject) => {
+		const connection = mysql.createConnection({
+			host: "157.90.167.161",
+			user: "devancestry",
+			password: "6B37rhSkPMWuDOR",
+			database: "devancestry",
+		});
+
+		connection.connect((err) => {
+			if (err) {
+				reject("Error connecting to MySQL");
+			} else {
+				connection.query("SELECT * FROM families", (queryError, results) => {
+					connection.end(); // Close the connection
+
+					if (queryError) {
+						reject("Error executing SQL query");
+					} else {
+						resolve(results); // Resolve with the entire results array
+					}
+				});
+			}
+		});
+	});
+}
+
+function getUserfromfamily(familyids) {
+	return new Promise((resolve, reject) => {
+		const connection = mysql.createConnection({
+			host: "157.90.167.161",
+			user: "devancestry",
+			password: "6B37rhSkPMWuDOR",
+			database: "devancestry",
+		});
+
+		connection.connect((err) => {
+			if (err) {
+				reject("Error connecting to MySQL");
+			} else {
+				connection.query(
+					"SELECT * FROM user_families WHERE family_id = ?",
+					[familyids],
+					(queryError, results) => {
+						connection.end(); // Close the connection
+
+						if (queryError) {
+							reject("Error executing SQL query");
+						}
+
+						if (results.length > 0) {
+							resolve(results);
+						} else {
+							reject("User in Family not found");
+						}
+					}
+				);
+			}
+		});
+	});
+}
+
 // Function to retrieve or generate key (replace with your logic)
 const retrieveOrGenerateKey = () => {
 	// Replace this with your actual key retrieval or generation logic
 	return crypto.randomBytes(32);
 };
+
+/***************************************** END *****************************************/
+
+/**************************** Single user message **************************/
 
 router.get("/messages", async (req, res) => {
 	try {
@@ -191,40 +382,79 @@ router.post("/messages", async (req, res) => {
 	}
 });
 
-function getUserById(userId) {
-	return new Promise((resolve, reject) => {
-		const connection = mysql.createConnection({
-			host: "157.90.167.161",
-			user: "devancestry",
-			password: "6B37rhSkPMWuDOR",
-			database: "devancestry",
+/***************************************** END *****************************************/
+
+/************************************* Family message **********************************/
+
+router.get("/family-messages", async (req, res) => {
+	try {
+		const familyInfo = req.familyDetails;
+		const receiverId = familyInfo.name;
+		const senderId = req.senderInfo.id;
+		const messages = await FamilyMessage.find({
+			$or: [
+				{ sender: senderId, receiver: receiverId },
+				{ sender: receiverId, receiver: senderId },
+			],
+		}).sort({ timestamp: 1 }); // Sort messages by timestamp in ascending order
+
+		const formattedMessages = messages.map((message) => {
+			return {
+				sender: message.sender,
+				receiver: message.receiver,
+				content: decryptMessage(message.message), // Decrypt the message content
+				timestamp: message.timestamp,
+			};
 		});
 
-		connection.connect((err) => {
-			if (err) {
-				reject("Error connecting to MySQL");
-			} else {
-				connection.query(
-					"SELECT * FROM users WHERE id = ?",
-					[userId],
-					(queryError, results) => {
-						connection.end(); // Close the connection
+		res.json(formattedMessages);
+	} catch (err) {
+		console.error("Error retrieving messages:", err);
+		res.status(500).json({ message: "Internal Server Error" });
+	}
+});
 
-						if (queryError) {
-							reject("Error executing SQL query");
-						}
+router.post("/family-messages", async (req, res) => {
+	// Check if the socket initialization has occurred
+	if (!isSocketInitialized) {
+		return res.status(500).json({ message: "Socket not initialized yet" });
+	}
 
-						if (results.length > 0) {
-							resolve(results[0]);
-						} else {
-							reject("User not found");
-						}
-					}
-				);
-			}
+	try {
+		const senderInfo = req.senderInfo;
+		const receiverInfo = req.receiverInfo;
+		const familyInfo = req.familyDetails;
+
+		const senderId = senderInfo.id;
+		const receiverId = receiverInfo.id;
+		const content = encryptMessage(req.body.message);
+
+		const newFamilyMessage = new FamilyMessage({
+			sender: senderId,
+			message: content,
+			receiver: familyInfo.name,
+			timestamp: Date.now(),
 		});
-	});
-}
+
+		await newFamilyMessage.save();
+
+		io.to(familyInfo.name).emit("family chat message", {
+			sender: senderId,
+			receiver: familyInfo.name,
+			message: decryptMessage(content),
+			timestamp: newFamilyMessage.timestamp, // Include the timestamp in the emitted message
+		});
+
+		res.sendStatus(200);
+	} catch (err) {
+		console.error("Error posting message:", err);
+		res.status(500).json({ message: "Internal Server Error" });
+	}
+});
+
+/***************************************** END *****************************************/
+
+/***************************************** Function for handling repeated actions *****************************************/
 
 function extractUserInfo(user, fields) {
 	const userInfo = {};
@@ -232,6 +462,20 @@ function extractUserInfo(user, fields) {
 		userInfo[field] = user[field];
 	});
 	return userInfo;
+}
+
+function extractFamilyInfo(familyName) {
+	const simplifiedFamilyData = familyName.map(({ id, name, status }) => ({
+		id,
+		name,
+		status,
+	}));
+	return simplifiedFamilyData;
+}
+
+function extractNameonly(extractFamilyInfo) {
+	const allNames = extractFamilyInfo.map(({ name }) => name);
+	return allNames;
 }
 
 // Function to encrypt a message
@@ -296,6 +540,7 @@ const saveEncryptedData = async (encryptedData) => {
 		console.error("Error saving encrypted data to MongoDB:", error);
 	}
 };
+/***************************************** END *****************************************/
 
 // Use the router for all routes starting with '/api'
 app.use("/api", router);

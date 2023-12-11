@@ -8,7 +8,8 @@ const joinRoomButton = document.getElementById("room-button");
 let room;
 
 userId = prompt("Enter a user id");
-recUserId = prompt("Enter a user id");
+recUserId = prompt("Enter a receiver id");
+room = prompt("Enter a room name");
 
 // Wrap your existing code inside the DOMContentLoaded event
 document.addEventListener("DOMContentLoaded", function () {
@@ -18,7 +19,8 @@ document.addEventListener("DOMContentLoaded", function () {
 		headers: {
 			"Content-Type": "application/json",
 			userId: userId, // Include the userId header if needed for authentication
-			recieverId: recUserId, // Include the recieverId header if needed for authentication
+			recieverId: recUserId,
+			family: room, // Include the recieverId header if needed for authentication
 		},
 	})
 		.then((response) => response.json())
@@ -46,6 +48,7 @@ document.addEventListener("DOMContentLoaded", function () {
 				extraHeaders: {
 					userId: userId,
 					recieverId: recUserId,
+					family: room,
 				},
 			},
 		},
@@ -80,7 +83,8 @@ document.addEventListener("DOMContentLoaded", function () {
 			headers: {
 				"Content-Type": "application/json",
 				userId: userId,
-				recieverId: recUserId, // Fix the typo in "receiverId"
+				recieverId: recUserId,
+				family: room, // Fix the typo in "receiverId"
 			},
 			body: JSON.stringify({ message: msg }),
 		})
@@ -107,12 +111,6 @@ document.addEventListener("DOMContentLoaded", function () {
 				console.error("Error sending message:", error.message);
 			});
 	}
-
-	// function sendMessage(msg) {
-	// 	let msgs = { sender: userId, message: msg };
-
-	// 	appendMessage(msgs);
-	// }
 
 	function appendMessage(msg) {
 		let mainDiv = document.createElement("div");
