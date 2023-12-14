@@ -27,7 +27,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 const authenticateUser = async (req, res, next) => {
 	const userId = req.header("userId");
 	const receiverId = req.header("recieverId"); // Corrected typo in the header name
-	const familyName = req.header("family");
+	const familyId = req.header("family");
 
 	if (!userId) {
 		return res.status(401).json({ message: "Unauthorized: No token provided" });
@@ -38,7 +38,7 @@ const authenticateUser = async (req, res, next) => {
 
 		// Check if the it is a family message or it is a single message, by checking if the familyName is empty
 		if (receiverId === "") {
-			getFamilyByName(familyName)
+			getFamilyByName(familyId)
 				.then(async (family) => {
 					const familyid = extractUserInfo(family, ["id", "name"]);
 					req.familyDetails = familyid;
@@ -208,7 +208,7 @@ function getUserById(userId) {
 	});
 }
 
-function getFamilyByName(familyName) {
+function getFamilyByName(familyId) {
 	return new Promise((resolve, reject) => {
 		const connection = mysql.createConnection({
 			host: "157.90.167.161",
@@ -222,8 +222,8 @@ function getFamilyByName(familyName) {
 				reject("Error connecting to MySQL");
 			} else {
 				connection.query(
-					"SELECT * FROM families WHERE name = ?",
-					[familyName],
+					"SELECT * FROM families WHERE id = ?",
+					[familyId],
 					(queryError, results) => {
 						connection.end(); // Close the connection
 
