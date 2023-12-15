@@ -15,7 +15,7 @@ room = prompt("Enter a room name");
 // Wrap your existing code inside the DOMContentLoaded event
 document.addEventListener("DOMContentLoaded", function () {
 	// Add the logic to make a GET request to /api/messages
-	fetch("http://chat.devhost.fatherlandancestry.com:3000/api/messages", {
+	fetch("http://localhost:3000/api/messages", {
 		method: "GET",
 		headers: {
 			"Content-Type": "application/json",
@@ -43,13 +43,12 @@ document.addEventListener("DOMContentLoaded", function () {
 	// Existing code here
 
 	// Add the userId as a header when connecting
-	const socket = io("http://chat.devhost.fatherlandancestry.com:3000", {
+	const socket = io("http://localhost:3000", {
 		transportOptions: {
 			polling: {
 				extraHeaders: {
 					userId: userId,
 					recieverId: recUserId,
-					family: room,
 				},
 			},
 		},
@@ -79,7 +78,7 @@ document.addEventListener("DOMContentLoaded", function () {
 	});
 
 	function sendMessage(msg) {
-		fetch("http://chat.devhost.fatherlandancestry.com:3000/api/messages", {
+		fetch("http://localhost:3000/api/messages", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",

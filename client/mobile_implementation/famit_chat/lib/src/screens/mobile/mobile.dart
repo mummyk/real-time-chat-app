@@ -1,3 +1,4 @@
+import 'package:famit_chat/src/screens/mobile/chat-user-screen-mobile.dart';
 import 'package:flutter/material.dart';
 
 class MobileScreen extends StatelessWidget {
@@ -5,8 +6,6 @@ class MobileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text("Mobile"),
-    );
+    return ChatUserScreenMobile();
   }
 }
