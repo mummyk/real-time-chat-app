@@ -8,7 +8,7 @@ class SplashScreen extends StatelessWidget {
     return const Scaffold(
       body: Center(
         child: Text(
-          "Famit chat",
+          "Fameet chat",
           style: TextStyle(
             color: Colors.green,
             fontWeight: FontWeight.bold,

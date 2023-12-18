@@ -94,6 +94,8 @@ let familySocketList = [];
 let myFamily = [];
 let isOnline = false;
 let isSocketInitialized = false;
+maxRetries = 3;
+let retries = 0;
 
 io.on("connection", (socket) => {
 	console.log(`A user with id=${socket.id} connected`);
@@ -114,6 +116,7 @@ io.on("connection", (socket) => {
 		}
 
 		// // Get all my family family in the db
+
 		fetch("https://dev.fatherlandancestry.com/api/v1/joined-family", {
 			method: "GET",
 			headers: {
@@ -143,7 +146,7 @@ io.on("connection", (socket) => {
 						// Normalize the order of IDs and concatenate
 						const normalizedIds = [userId, "family", family.id].sort();
 						const familyDmChat = normalizedIds.join("");
-						console.log(familyDmChat);
+
 						socket.join(familyDmChat);
 					});
 					return { familyData }; // Return as JSON
@@ -188,7 +191,7 @@ io.on("connection", (socket) => {
 						// Normalize the order of IDs and concatenate
 						const normalizedIds = [userId, "dynasty", dynasty.id].sort();
 						const dynastyDmChat = normalizedIds.join("");
-						console.log(dynastyDmChat);
+
 						socket.join(dynastyDmChat);
 					});
 					console.log({ dynastyData });
@@ -204,13 +207,14 @@ io.on("connection", (socket) => {
 	}
 
 	getAllUsers().then((data) => {
-		console.log(data);
-		data.forEach((socksUserId) => {
+		const userIds = data.map((item) => item.id);
+		console.log(userIds);
+		userIds.forEach((socksUserId) => {
 			if (socksUserId !== userId) {
 				// Normalize the order of IDs and concatenate
 				const normalizedIds = [userId, "single", socksUserId].sort();
 				const dmChat = normalizedIds.join("");
-				console.log(dmChat);
+
 				socket.join(dmChat);
 			}
 		});
@@ -334,8 +338,8 @@ function getAllUsers() {
 
 						if (results.length > 0) {
 							//resolve(results[0]);
-							const userIds = results.map((item) => item.id);
-							resolve(userIds);
+
+							resolve(results);
 						} else {
 							reject("User not found");
 						}
@@ -573,6 +577,28 @@ router.post("/dynasty-messages", async (req, res) => {
 	}
 });
 
+/*************************************** Get all user id, names, and images ******************************/
+
+router.get("/all-users", async (req, res) => {
+	getAllUsers().then((data) => {
+		const userDetails = data.map((item) => {
+			// Check if profile_picture is null
+			const profilePicture = item.profile_picture
+				? "https://dev.fatherlandancestry.com" + item.profile_picture
+				: null;
+
+			return {
+				id: item.id,
+				name: item.name,
+				profile_picture: profilePicture,
+			};
+		});
+		res.json(userDetails); // Assuming you want to send the userDetails as JSON response
+	});
+});
+
+/*************************************** End *******************************************/
+
 /***************************************** END *****************************************/
 
 /***************************************** Function for handling repeated actions *****************************************/
@@ -662,6 +688,6 @@ app.use(express.static(__dirname));
 
 // Start the server
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+server.listen(PORT, "0.0.0.0", () => {
 	console.log(`Server is running on port ${PORT}`);
 });

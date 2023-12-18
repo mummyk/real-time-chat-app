@@ -2,7 +2,7 @@ import 'package:famit_chat/src/widgets/user-display-mobile.dart';
 import 'package:flutter/material.dart';
 
 class ChatUserScreenMobile extends StatelessWidget {
-  const ChatUserScreenMobile({super.key});
+  ChatUserScreenMobile({super.key});
 
   @override
   Widget build(BuildContext context) {

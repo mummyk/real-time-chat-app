@@ -5,7 +5,9 @@ import 'package:get/get.dart';
 import '../../widgets/chat-bubble-list.dart';
 
 class ChatScreenMobile extends StatelessWidget {
-  const ChatScreenMobile({super.key});
+  final Map<String, dynamic> userData;
+  ChatScreenMobile({super.key, required this.userData});
+  final controller = Get.put(ChatController());
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +15,7 @@ class ChatScreenMobile extends StatelessWidget {
     final size = MediaQuery.of(context).size;
     return Scaffold(
       appBar: AppBar(
-        title: Text("Chat"),
+        title: Text(userData['name']),
       ),
       body: Column(
         children: [
@@ -48,6 +50,10 @@ class ChatScreenMobile extends StatelessWidget {
                   child: GestureDetector(
                     onTap: () {
                       // Handle button press
+                      final receiver = userData['id'];
+                      final message = controller.chat.text;
+                      const sender = "32";
+                      controller.sendMessage(sender, message, receiver);
                     },
                     child: const Icon(
                       Icons.send,
