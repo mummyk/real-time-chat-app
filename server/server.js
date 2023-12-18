@@ -99,111 +99,130 @@ io.on("connection", (socket) => {
 	console.log(`A user with id=${socket.id} connected`);
 
 	const userId = socket.handshake.headers.userid;
-	const receiverId = socket.handshake.headers.recieverid;
 	const token = socket.handshake.headers.authorization;
 
-	// Add the socket to the sockets object
-	sockets[userId] = socket.id;
-	console.log(`Socket for user ${userId} added to sockets object`);
+	if (userId) {
+		// Add the socket to the sockets object
+		sockets[userId] = socket.id;
+		console.log(`Socket for user ${userId} added to sockets object`);
+		console.log(sockets);
 
-	// Check if the user is online
-	if (sockets[userId]) {
-		isOnline = true;
+		// Check if the user is online
+		if (sockets[userId]) {
+			isOnline = true;
+			socket.emit("isOnline", { user: userId });
+		}
+
+		// // Get all my family family in the db
+		fetch("https://dev.fatherlandancestry.com/api/v1/joined-family", {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: token,
+			},
+		})
+			.then((response) => {
+				if (!response.ok) {
+					if (response.status === 406) {
+						return response.text();
+					}
+					throw new Error(`HTTP error! Status: ${response.status}`);
+				}
+				return response.json();
+			})
+			.then((data) => {
+				if (Array.isArray(data)) {
+					// Extract "id" and "name" values from each family object
+					const familyData = data.map((item) => ({
+						id: item.family.id,
+						name: item.family.name,
+					}));
+					console.log({ familyData });
+					// Join socket rooms based on family data
+					familyData.forEach((family) => {
+						// Normalize the order of IDs and concatenate
+						const normalizedIds = [userId, "family", family.id].sort();
+						const familyDmChat = normalizedIds.join("");
+						console.log(familyDmChat);
+						socket.join(familyDmChat);
+					});
+					return { familyData }; // Return as JSON
+				} else {
+					throw new Error("Invalid response format");
+				}
+			})
+			.catch((error) => {
+				console.error("Error fetching family data:", error.message);
+				throw error; // Re-throw the error
+			});
+
+		// Get usert dynasty
+		fetch(
+			`https://dev.fatherlandancestry.com/api/v1/joined-dynasty/${userId}`,
+			{
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: token,
+				},
+			}
+		)
+			.then((response) => {
+				if (!response.ok) {
+					if (response.status === 406) {
+						return response.text();
+					}
+					throw new Error(`HTTP error! Status: ${response.status}`);
+				}
+				return response.json();
+			})
+			.then((data) => {
+				if (Array.isArray(data)) {
+					// Extract "id" and "name" values from each family object
+					const dynastyData = data.map((item) => ({
+						id: item.Dynasty.id,
+						name: item.Dynasty.name,
+					}));
+					// Join socket rooms based on family data
+					dynastyData.forEach((dynasty) => {
+						// Normalize the order of IDs and concatenate
+						const normalizedIds = [userId, "dynasty", dynasty.id].sort();
+						const dynastyDmChat = normalizedIds.join("");
+						console.log(dynastyDmChat);
+						socket.join(dynastyDmChat);
+					});
+					console.log({ dynastyData });
+					return { dynastyData }; // Return as JSON
+				} else {
+					console.log(data);
+				}
+			})
+			.catch((error) => {
+				console.error("Error fetching dynasty data:", error.message);
+				throw error;
+			});
 	}
 
-	// // Get all my family family in the db
-	fetch("https://dev.fatherlandancestry.com/api/v1/joined-family", {
-		method: "GET",
-		headers: {
-			"Content-Type": "application/json",
-			Authorization: token,
-		},
-	})
-		.then((response) => {
-			if (!response.ok) {
-				if (response.status === 406) {
-					return response.text();
-				}
-				throw new Error(`HTTP error! Status: ${response.status}`);
+	getAllUsers().then((data) => {
+		console.log(data);
+		data.forEach((socksUserId) => {
+			if (socksUserId !== userId) {
+				// Normalize the order of IDs and concatenate
+				const normalizedIds = [userId, "single", socksUserId].sort();
+				const dmChat = normalizedIds.join("");
+				console.log(dmChat);
+				socket.join(dmChat);
 			}
-			return response.json();
-		})
-		.then((data) => {
-			if (Array.isArray(data)) {
-				// Extract "id" and "name" values from each family object
-				const familyData = data.map((item) => ({
-					id: item.family.id,
-					name: item.family.name,
-				}));
-				console.log({ familyData });
-				// Join socket rooms based on family data
-				familyData.forEach((family) => {
-					// Normalize the order of IDs and concatenate
-					const normalizedIds = [userId, "family", family.id].sort();
-					const familyDmChat = normalizedIds.join("");
-					console.log(familyDmChat);
-					socket.join(familyDmChat);
-				});
-				return { familyData }; // Return as JSON
-			} else {
-				throw new Error("Invalid response format");
-			}
-		})
-		.catch((error) => {
-			console.error("Error fetching family data:", error.message);
-			throw error; // Re-throw the error
 		});
+	});
 
-	// Get usert dynasty
-	fetch(`https://dev.fatherlandancestry.com/api/v1/joined-dynasty/${userId}`, {
-		method: "GET",
-		headers: {
-			"Content-Type": "application/json",
-			Authorization: token,
-		},
-	})
-		.then((response) => {
-			if (!response.ok) {
-				if (response.status === 406) {
-					return response.text();
-				}
-				throw new Error(`HTTP error! Status: ${response.status}`);
-			}
-			return response.json();
-		})
-		.then((data) => {
-			if (Array.isArray(data)) {
-				// Extract "id" and "name" values from each family object
-				const dynastyData = data.map((item) => ({
-					id: item.Dynasty.id,
-					name: item.Dynasty.name,
-				}));
-				// Join socket rooms based on family data
-				dynastyData.forEach((dynasty) => {
-					// Normalize the order of IDs and concatenate
-					const normalizedIds = [userId, "dynasty", dynasty.id].sort();
-					const dynastyDmChat = normalizedIds.join("");
-					console.log(dynastyDmChat);
-					socket.join(dynastyDmChat);
-				});
-				console.log({ dynastyData });
-				return { dynastyData }; // Return as JSON
-			} else {
-				console.log(data);
-			}
-		})
-		.catch((error) => {
-			console.error("Error fetching dynasty data:", error.message);
-			throw error;
-		});
-
-	if (sockets[userId] && sockets[receiverId]) {
-		// Normalize the order of IDs and concatenate
-		const normalizedIds = [userId, "single", receiverId].sort();
-		const dmChat = normalizedIds.join("");
-		console.log(dmChat);
-		socket.join(dmChat);
-	}
+	// if (sockets[userId] && sockets[receiverId]) {
+	// 	// Normalize the order of IDs and concatenate
+	// 	const normalizedIds = [userId, "single", receiverId].sort();
+	// 	const dmChat = normalizedIds.join("");
+	// 	console.log(dmChat);
+	// 	socket.join(dmChat);
+	// }
 
 	isSocketInitialized = true;
 
@@ -214,6 +233,7 @@ io.on("connection", (socket) => {
 		);
 		if (disconnectedUserId) {
 			delete sockets[userId];
+			isOnline = false;
 			console.log(`User ${userId} disconnected`);
 		}
 	});
@@ -289,6 +309,43 @@ function getUserById(userId) {
 	});
 }
 
+function getAllUsers() {
+	return new Promise((resolve, reject) => {
+		const connection = mysql.createConnection({
+			host: "157.90.167.161",
+			user: "devancestry",
+			password: "6B37rhSkPMWuDOR",
+			database: "devancestry",
+		});
+
+		connection.connect((err) => {
+			if (err) {
+				reject("Error connecting to MySQL");
+			} else {
+				connection.query(
+					"SELECT * FROM users",
+
+					(queryError, results) => {
+						connection.end(); // Close the connection
+
+						if (queryError) {
+							reject("Error executing SQL query");
+						}
+
+						if (results.length > 0) {
+							//resolve(results[0]);
+							const userIds = results.map((item) => item.id);
+							resolve(userIds);
+						} else {
+							reject("User not found");
+						}
+					}
+				);
+			}
+		});
+	});
+}
+
 // Function to retrieve or generate key (replace with your logic)
 const retrieveOrGenerateKey = () => {
 	// Replace this with your actual key retrieval or generation logic
@@ -350,7 +407,7 @@ router.post("/messages", async (req, res) => {
 		await newMessage.save();
 
 		// Emit the message to the DM room
-		const normalizedIds = [userId, "single", receiverId].sort();
+		const normalizedIds = [senderId, "single", receiverId].sort();
 		const dmChat = normalizedIds.join("");
 		io.to(dmChat).emit("privateMessage", {
 			sender: senderId,
