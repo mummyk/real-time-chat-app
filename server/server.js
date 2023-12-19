@@ -414,6 +414,7 @@ router.post("/messages", async (req, res) => {
 		const normalizedIds = [senderId, "single", receiverId].sort();
 		const dmChat = normalizedIds.join("");
 		io.to(dmChat).emit("privateMessage", {
+			ids: dmChat,
 			sender: senderId,
 			receiver: receiverId,
 			message: decryptMessage(content),
