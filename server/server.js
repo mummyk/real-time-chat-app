@@ -317,7 +317,10 @@ saveLastChat(id,messages){
 
 		await newLastChat.save();
 	}
-	});
+	}).catch((error) => {
+				console.error("Error fetching user:", error.message);
+				throw error; // Re-throw the error
+			});
 }
 
 function getUserById(userId) {
