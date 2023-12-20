@@ -300,7 +300,7 @@ const LastChat = mongoose.model("LastChat", {
 	},
 });
 
-saveLastChat(id, messages) {
+function saveLastChat(id, messages) {
   getUserById(id)
     .then(async (data) => {
       const userIds = data.map((item) => item.id);
@@ -487,6 +487,40 @@ router.post("/messages", async (req, res) => {
 		res.status(500).json({ message: "Internal Server Error" });
 	}
 });
+
+router.get("/last-messages", async (req, res) => {
+  try {
+    const receiverId = req.receiverInfo.id;
+    const senderId = req.senderInfo.id;
+
+    // Adjusted query to get the latest messages with a limit of 1
+    const messages = await Message.find({
+      $or: [
+        { sender: senderId, receiver: receiverId },
+        { sender: receiverId, receiver: senderId },
+      ],
+    })
+      .sort({ timestamp: -1 }) // Sort messages by timestamp in descending order
+      .limit(1); // Limit the result to the latest message
+
+    const formattedMessages = messages.map((message) => {
+      return {
+        sender: message.sender,
+        receiver: message.receiver,
+        content: decryptMessage(message.message), // Decrypt the message content
+        timestamp: message.timestamp,
+      };
+    });
+
+    res.json(formattedMessages);
+  } catch (err) {
+    console.error("Error retrieving messages:", err);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+
+
 
 /***************************************** END *****************************************/
 
