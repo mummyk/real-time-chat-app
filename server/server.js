@@ -95,7 +95,7 @@ let familySocketList = [];
 let myFamily = [];
 let isOnline = false;
 let isSocketInitialized = false;
-maxRetries = 3;
+let maxRetries = 3;
 let retries = 0;
 
 io.on("connection", (socket) => {
@@ -300,12 +300,23 @@ const LastChat = mongoose.model("LastChat", {
 	},
 });
 
-saveLastChat(id,message){
-	getUserById(id).then(async (data)=>{
+saveLastChat(id,messages){
+	getUserById(id).then(async (data)=> {
 	const userIds = data.map((item) => item.id);
 	const names = data.map((item) => item.name);
 	const profile_pics = data.map((item) => item.profile_picture);
-	
+	const lastChat = await LastChat.find({userIds: id}).sort({ timestamp: 1 });  
+	if (lastchat.length != 0){}else{
+		const newLastChat = new LastChat({
+			userId: userIds,
+			name: names,
+			profile_picture: profile_pics,
+			message: messages,
+			timestamp: Date.now(),
+		});
+
+		await newLastChat.save();
+	}
 	});
 }
 
