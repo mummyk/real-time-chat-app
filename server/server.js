@@ -504,7 +504,7 @@ router.get("/last-messages", async (req, res) => {
       .limit(1); // Limit the result to the latest message
 
     const profile_pics = getUserById(receiverId).then((data) => {
-		const profile = data.map((item) => item.profile_picture);
+		const profile = data.profile_picture;
 		return profile;
 		
 	});
