@@ -300,6 +300,14 @@ const LastChat = mongoose.model("LastChat", {
 	},
 });
 
+saveLastChat(id,message){
+	getUserById(id).then(async (data)=>{
+	const userIds = data.map((item) => item.id);
+	const names = data.map((item) => item.name);
+	const profile_pics = data.map((item) => item.profile_picture);
+	});
+}
+
 function getUserById(userId) {
 	return new Promise((resolve, reject) => {
 		const connection = mysql.createConnection({
