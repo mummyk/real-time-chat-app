@@ -513,7 +513,7 @@ router.get("/last-messages", async (req, res) => {
 
     const formattedMessages = messages.map((message) => {
       return {
-	ids: `${message.sender + message.receiver }`,
+	ids: `${parseInt(str, message.sender) + parseInt(str, message.receiver)}`,
         sender: message.sender,
         receiver: message.receiver,
 	profile_picture: profile_pics,
