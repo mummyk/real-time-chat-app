@@ -513,9 +513,9 @@ router.get("/last-messages", async (req, res) => {
 
     const formattedMessages = messages.map((message) => {
       return {
-	ids: `${parseInt(message.sender, 10) + parseInt(message.receiver, 10)}`,
-        sender: message.sender,
-        receiver: message.receiver,
+	ids: `${parseInt(senderId, 10) + parseInt(receiverId, 10)}`,
+        sender: senderId,
+        receiver: receiverId,
 	profile_picture: profile_pics,
         content: decryptMessage(message.message), // Decrypt the message content
         timestamp: message.timestamp,
