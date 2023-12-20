@@ -6,6 +6,7 @@ const http = require("http");
 const socketIo = require("socket.io");
 const mysql = require("mysql2");
 const crypto = require("crypto");
+const fetch = require("node-fetch")
 
 const app = express();
 const router = express.Router();
@@ -272,6 +273,27 @@ const FamilyMessage = mongoose.model("FamilyMessage", {
 	sender: String,
 	message: mongoose.Schema.Types.Mixed, // Change the type to Mixed
 	receiver: String,
+	timestamp: {
+		type: Date,
+		default: Date.now,
+	},
+});
+
+const DynastyMessage = mongoose.model("DynastyMessage", {
+	sender: String,
+	message: mongoose.Schema.Types.Mixed, // Change the type to Mixed
+	receiver: String,
+	timestamp: {
+		type: Date,
+		default: Date.now,
+	},
+});
+
+const LastChat = mongoose.model("LastChat", {
+	userId: String,
+	name: String,
+	profile_picture : String;
+	message: mongoose.Schema.Types.Mixed, // Change the type to Mixed
 	timestamp: {
 		type: Date,
 		default: Date.now,
