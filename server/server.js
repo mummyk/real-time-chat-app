@@ -292,7 +292,7 @@ const DynastyMessage = mongoose.model("DynastyMessage", {
 const LastChat = mongoose.model("LastChat", {
 	userId: String,
 	name: String,
-	profile_picture : String;
+	profile_picture : String,
 	message: mongoose.Schema.Types.Mixed, // Change the type to Mixed
 	timestamp: {
 		type: Date,
@@ -305,6 +305,7 @@ saveLastChat(id,message){
 	const userIds = data.map((item) => item.id);
 	const names = data.map((item) => item.name);
 	const profile_pics = data.map((item) => item.profile_picture);
+	
 	});
 }
 
