@@ -503,7 +503,7 @@ router.get("/last-messages", async (req, res) => {
       .sort({ timestamp: -1 }) // Sort messages by timestamp in descending order
       .limit(1); // Limit the result to the latest message
 
-    const profile_pics = getUserById(receiverId).then((data) => {
+    const profile_pics = await getUserById(receiverId).then((data) => {
 		const profile = data.profile_picture;
 		return profile;
 		
