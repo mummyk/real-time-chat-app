@@ -289,53 +289,53 @@ const DynastyMessage = mongoose.model("DynastyMessage", {
 	},
 });
 
-const LastChat = mongoose.model("LastChat", {
-	userId: String,
-	name: String,
-	profile_picture : String,
-	message: mongoose.Schema.Types.Mixed, // Change the type to Mixed
-	timestamp: {
-		type: Date,
-		default: Date.now,
-	},
-});
+// const LastChat = mongoose.model("LastChat", {
+// 	userId: String,
+// 	name: String,
+// 	profile_picture : String,
+// 	message: mongoose.Schema.Types.Mixed, // Change the type to Mixed
+// 	timestamp: {
+// 		type: Date,
+// 		default: Date.now,
+// 	},
+// });
 
-function saveLastChat(id, messages) {
-  getUserById(id)
-    .then(async (data) => {
-      const userIds = data.map((item) => item.id);
-      const names = data.map((item) => item.name);
-      const profile_pics = data.map((item) => item.profile_picture);
+// function saveLastChat(id, messages) {
+//   getUserById(id)
+//     .then(async (data) => {
+//       const userIds = data.map((item) => item.id);
+//       const names = data.map((item) => item.name);
+//       const profile_pics = data.map((item) => item.profile_picture);
       
-      // Find existing last chat with the given id
-      const existingLastChat = await LastChat.findOne({ userIds: id });
+//       // Find existing last chat with the given id
+//       const existingLastChat = await LastChat.findOne({ userIds: id });
 
-      if (existingLastChat) {
-        // Update the existing last chat
-        existingLastChat.name = names;
-        existingLastChat.profile_picture = profile_pics;
-        existingLastChat.message = messages;
-        existingLastChat.timestamp = Date.now();
+//       if (existingLastChat) {
+//         // Update the existing last chat
+//         existingLastChat.name = names;
+//         existingLastChat.profile_picture = profile_pics;
+//         existingLastChat.message = messages;
+//         existingLastChat.timestamp = Date.now();
 
-        await existingLastChat.save();
-      } else {
-        // Create a new LastChat if it doesn't exist
-        const newLastChat = new LastChat({
-          userIds: id,
-          name: names,
-          profile_picture: profile_pics,
-          message: messages,
-          timestamp: Date.now(),
-        });
+//         await existingLastChat.save();
+//       } else {
+//         // Create a new LastChat if it doesn't exist
+//         const newLastChat = new LastChat({
+//           userIds: id,
+//           name: names,
+//           profile_picture: profile_pics,
+//           message: messages,
+//           timestamp: Date.now(),
+//         });
 
-        await newLastChat.save();
-      }
-    })
-    .catch((error) => {
-      console.error("Error fetching user:", error.message);
-      throw error; // Re-throw the error
-    });
-}
+//         await newLastChat.save();
+//       }
+//     })
+//     .catch((error) => {
+//       console.error("Error fetching user:", error.message);
+//       throw error; // Re-throw the error
+//     });
+// }
 
 
 function getUserById(userId) {
@@ -503,10 +503,20 @@ router.get("/last-messages", async (req, res) => {
       .sort({ timestamp: -1 }) // Sort messages by timestamp in descending order
       .limit(1); // Limit the result to the latest message
 
+    const profile_pics = getUserById(receiverId).then((data) => {
+		const profile = data.map((item) => item.profile_picture);
+		return profile;
+		
+	});
+
+
+
     const formattedMessages = messages.map((message) => {
       return {
+	ids: `${message.sender + message.receiver }`,
         sender: message.sender,
         receiver: message.receiver,
+	profile_picture: profile_pics,
         content: decryptMessage(message.message), // Decrypt the message content
         timestamp: message.timestamp,
       };
