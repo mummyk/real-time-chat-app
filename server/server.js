@@ -300,28 +300,43 @@ const LastChat = mongoose.model("LastChat", {
 	},
 });
 
-saveLastChat(id,messages){
-	getUserById(id).then(async (data)=> {
-	const userIds = data.map((item) => item.id);
-	const names = data.map((item) => item.name);
-	const profile_pics = data.map((item) => item.profile_picture);
-	const lastChat = await LastChat.find({userIds: id}).sort({ timestamp: 1 });  
-	if (lastchat.length != 0){}else{
-		const newLastChat = new LastChat({
-			userId: userIds,
-			name: names,
-			profile_picture: profile_pics,
-			message: messages,
-			timestamp: Date.now(),
-		});
+saveLastChat(id, messages) {
+  getUserById(id)
+    .then(async (data) => {
+      const userIds = data.map((item) => item.id);
+      const names = data.map((item) => item.name);
+      const profile_pics = data.map((item) => item.profile_picture);
+      
+      // Find existing last chat with the given id
+      const existingLastChat = await LastChat.findOne({ userIds: id });
 
-		await newLastChat.save();
-	}
-	}).catch((error) => {
-				console.error("Error fetching user:", error.message);
-				throw error; // Re-throw the error
-			});
+      if (existingLastChat) {
+        // Update the existing last chat
+        existingLastChat.name = names;
+        existingLastChat.profile_picture = profile_pics;
+        existingLastChat.message = messages;
+        existingLastChat.timestamp = Date.now();
+
+        await existingLastChat.save();
+      } else {
+        // Create a new LastChat if it doesn't exist
+        const newLastChat = new LastChat({
+          userIds: id,
+          name: names,
+          profile_picture: profile_pics,
+          message: messages,
+          timestamp: Date.now(),
+        });
+
+        await newLastChat.save();
+      }
+    })
+    .catch((error) => {
+      console.error("Error fetching user:", error.message);
+      throw error; // Re-throw the error
+    });
 }
+
 
 function getUserById(userId) {
 	return new Promise((resolve, reject) => {
