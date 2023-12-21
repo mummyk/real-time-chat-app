@@ -497,7 +497,7 @@ router.post("/messages", async (req, res) => {
 		await newMessage.save();
 		
 		// update the mychat list
-		const filter = const filter = {
+		const filter = {
 			      $or: [
 			        { owner: senderId, connect: receiverId, types:"single" },
 			        { sender: receiverId, receiver: senderId, types:"single" },
