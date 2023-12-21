@@ -622,8 +622,8 @@ router.post("/family-messages", async (req, res) => {
 		const familyDmChat = normalizedIds.join("");
 
 		io.to(familyDmChat).emit("family chat message", {
-			ids: message.ids,
-			types: message.type,
+			ids: `${parseInt(senderId, 10) + parseInt(familyId, 10)}`,
+			types: "family",
 			sender: senderId,
 			receiver: familyInfo.name,
 			message: decryptMessage(content),
@@ -643,18 +643,20 @@ router.post("/family-messages", async (req, res) => {
 
 router.get("/dynasty-messages", async (req, res) => {
 	try {
-		const dynastyInfo = req.familyDetails;
-		const receiverId = familyInfo.name;
+		const dynastyInfo = req.dynastyDetails;
+		const dynastyId = dynastyInfo.id;
 		const senderId = req.senderInfo.id;
-		const messages = await FamilyMessage.find({
+		const messages = await DynastyMessage.find({
 			$or: [
-				{ sender: senderId, receiver: receiverId },
-				{ sender: receiverId, receiver: senderId },
+				{ sender: senderId, receiver: dynastyId },
+				{ sender: dynastyId, receiver: senderId },
 			],
 		}).sort({ timestamp: 1 }); // Sort messages by timestamp in ascending order
 
 		const formattedMessages = messages.map((message) => {
 			return {
+				ids: message.ids,
+				types: message.type,
 				sender: message.sender,
 				receiver: message.receiver,
 				content: decryptMessage(message.message), // Decrypt the message content
@@ -677,14 +679,16 @@ router.post("/dynasty-messages", async (req, res) => {
 
 	try {
 		const senderInfo = req.senderInfo;
-		const receiverInfo = req.receiverInfo;
-		const familyInfo = req.familyDetails;
+		const dynastyInfo = req.dynastyDetails;
+		
 
 		const senderId = senderInfo.id;
-		const receiverId = receiverInfo.id;
+		const dynastyId = dynastyInfo.id;
 		const content = encryptMessage(req.body.message);
 
-		const newFamilyMessage = new FamilyMessage({
+		const newDynastyMessage = new DynastyMessage({
+			ids: `${parseInt(senderId, 10) + parseInt(dynastyId, 10)}`,
+			types: 'dynasty',
 			sender: senderId,
 			message: content,
 			receiver: familyInfo.name,
@@ -694,13 +698,14 @@ router.post("/dynasty-messages", async (req, res) => {
 		await newFamilyMessage.save();
 
 		//Emit to family sockets
-		const familnameId = await getFamilyById(familyInfo.id);
-		const normalizedIds = [userId, familnameId].sort();
+		const normalizedIds = [userId, dynastyId].sort();
 		const familyDmChat = normalizedIds.join("");
 
 		io.to(dynastyDmChat).emit("dynasty chat message", {
+			ids: `${parseInt(senderId, 10) + parseInt(dynastyId, 10)}`,
+			types: 'dynasty',
 			sender: senderId,
-			receiver: familyInfo.name,
+			receiver: dynastyId,
 			message: decryptMessage(content),
 			timestamp: newFamilyMessage.timestamp, // Include the timestamp in the emitted message
 		});
