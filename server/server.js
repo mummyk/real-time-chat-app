@@ -295,12 +295,13 @@ const DynastyMessage = mongoose.model("DynastyMessage", {
 	},
 });
 
+
 const MyChatList = mongoose.model("MyChatList", {
-	userId: String,
-	name: String,
+	owner: String,
+	connect: String,
 	type: String,
 	profile_picture : String,
-	message: mongoose.Schema.Types.Mixed, // Change the type to Mixed
+	message: mongoose.Schema.Types.Mixed,// Change the type to Mixed
 	timestamp: {
 		type: Date,
 		default: Date.now,
@@ -494,6 +495,30 @@ router.post("/messages", async (req, res) => {
 		});
 
 		await newMessage.save();
+		
+		// update the mychat list
+		const filter = const filter = {
+			      $or: [
+			        { sender: senderId, receiver: receiverId, types:"single" },
+			        { sender: receiverId, receiver: senderId, types:"single" },
+			      ],
+			    };
+		const replacement = {
+			      // Include the fields you want to update and their new values
+			      // For example, updating the 'message' field
+			      $set: {
+			        message: content,
+			        // Include other fields to update as needed
+			      },
+			    };
+		// Use updateOne to replace the document with the new data
+		const result = await collection.updateOne(filter, replacement);
+		
+		if (result.modifiedCount > 0) {
+		      console.log(`User updated successfully.`);
+		} else {
+		      console.log(`User not found.`);
+		}
 
 		
 		io.to(dmChat).emit("privateMessage", {
