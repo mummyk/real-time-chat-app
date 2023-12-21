@@ -717,6 +717,12 @@ router.post("/dynasty-messages", async (req, res) => {
 	}
 });
 
+/*************************************** Get all messages and save to last massage db *******************/
+
+
+
+/*************************************** END ******************************************/
+
 /*************************************** Get all user id, names, and images ******************************/
 
 router.get("/all-users", async (req, res) => {
