@@ -517,11 +517,15 @@ router.post("/messages", async (req, res) => {
 		if (result.modifiedCount > 0) {
 		      console.log(`last chat list updated successfully.`);
 		} else {
+			const profile_pics = await getUserById(parseInt(message.receiver, 10)).then((data) => {
+				const profile = data.profile_picture;
+				return profile;
+			});
 			const newMyChatList = new MyChatList({
 			owner: senderId,
 			connect: receiverId,
 			type: "single",
-			profile_picture : "",
+			profile_picture : profile_pics,
 			message: content,// Change the type to Mixed
 			timestamp: Date.now(),
 		});
@@ -709,18 +713,17 @@ router.post("/dynasty-messages", async (req, res) => {
 
 /*************************************** Get all messages and save to last massage db *******************/
 
-router.get("/last-messages", async (req, res) => {
+router.get("/last-messages-list", async (req, res) => {
   try {
     const senderId = req.senderInfo.id;
 
-    const messages = await Message.find({});
+    const messages = await MyChatList.find({$or: [
+			        { sender: senderId},
+			        { receiver: senderId},
+			      ],
+			});
 
     const formattedMessages = messages.map((message) => {
-	const profile_pics = await getUserById(parseInt(message.receiver, 10)).then((data) => {
-		const profile = data.profile_picture;
-		return profile;
-		
-	});
       return {
 	ids: message.ids,
 	types: message.type,
