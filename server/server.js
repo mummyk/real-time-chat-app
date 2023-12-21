@@ -260,6 +260,8 @@ mongoose.connection
 	});
 
 const Message = mongoose.model("Message", {
+	ids: String,
+	types: String,
 	sender: String,
 	message: mongoose.Schema.Types.Mixed, // Change the type to Mixed
 	receiver: String,
@@ -270,6 +272,8 @@ const Message = mongoose.model("Message", {
 });
 
 const FamilyMessage = mongoose.model("FamilyMessage", {
+	ids: String,
+	types: String,
 	sender: String,
 	message: mongoose.Schema.Types.Mixed, // Change the type to Mixed
 	receiver: String,
@@ -280,9 +284,23 @@ const FamilyMessage = mongoose.model("FamilyMessage", {
 });
 
 const DynastyMessage = mongoose.model("DynastyMessage", {
+	ids: String,
+	types: String,
 	sender: String,
 	message: mongoose.Schema.Types.Mixed, // Change the type to Mixed
 	receiver: String,
+	timestamp: {
+		type: Date,
+		default: Date.now,
+	},
+});
+
+const MyChatList = mongoose.model("MyChatList", {
+	userId: String,
+	name: String,
+	type: String,
+	profile_picture : String,
+	message: mongoose.Schema.Types.Mixed, // Change the type to Mixed
 	timestamp: {
 		type: Date,
 		default: Date.now,
@@ -433,9 +451,10 @@ router.get("/messages", async (req, res) => {
 
 		const formattedMessages = messages.map((message) => {
 			return {
+				ids: message.ids;
 				sender: message.sender,
 				receiver: message.receiver,
-				content: decryptMessage(message.message), // Decrypt the message content
+				message: decryptMessage(message.message), // Decrypt the message content
 				timestamp: message.timestamp,
 			};
 		});
@@ -461,7 +480,13 @@ router.post("/messages", async (req, res) => {
 		const receiverId = receiverInfo.id;
 		const content = encryptMessage(req.body.message);
 
+		// Emit the message to the DM room
+		const normalizedIds = [senderId, "single", receiverId].sort();
+		const dmChat = normalizedIds.join("");
+
 		const newMessage = new Message({
+			ids: `${parseInt(senderId, 10) + parseInt(receiverId, 10)}`,
+			types: "single",
 			sender: senderId,
 			message: content,
 			receiver: receiverId,
@@ -470,11 +495,10 @@ router.post("/messages", async (req, res) => {
 
 		await newMessage.save();
 
-		// Emit the message to the DM room
-		const normalizedIds = [senderId, "single", receiverId].sort();
-		const dmChat = normalizedIds.join("");
+		
 		io.to(dmChat).emit("privateMessage", {
-			ids: dmChat,
+			ids: `${parseInt(senderId, 10) + parseInt(receiverId, 10)}`,
+			types: "single",
 			sender: senderId,
 			receiver: receiverId,
 			message: decryptMessage(content),
@@ -513,9 +537,9 @@ router.get("/last-messages", async (req, res) => {
 
     const formattedMessages = messages.map((message) => {
       return {
-	ids: `${parseInt(senderId, 10) + parseInt(receiverId, 10)}`,
-        sender: senderId,
-        receiver: receiverId,
+	ids: message.ids,
+        sender: message.sender,
+        receiver: message.receiver,
 	profile_picture: profile_pics,
         content: decryptMessage(message.message), // Decrypt the message content
         timestamp: message.timestamp,
@@ -539,12 +563,13 @@ router.get("/last-messages", async (req, res) => {
 router.get("/family-messages", async (req, res) => {
 	try {
 		const familyInfo = req.familyDetails;
+		const familyId = familyInfo.id;
 		const receiverId = familyInfo.name;
 		const senderId = req.senderInfo.id;
 		const messages = await FamilyMessage.find({
 			$or: [
-				{ sender: senderId, receiver: receiverId },
-				{ sender: receiverId, receiver: senderId },
+				{ sender: senderId, receiver: familyId },
+				{ sender: familyId, receiver: senderId },
 			],
 		}).sort({ timestamp: 1 }); // Sort messages by timestamp in ascending order
 
@@ -577,23 +602,24 @@ router.post("/family-messages", async (req, res) => {
 
 		const senderId = senderInfo.id;
 		const receiverId = receiverInfo.id;
+		const familyId = familyInfo.id;
 		const content = encryptMessage(req.body.message);
 
 		const newFamilyMessage = new FamilyMessage({
 			sender: senderId,
 			message: content,
-			receiver: familyInfo.name,
+			receiver: familyId,
 			timestamp: Date.now(),
 		});
 
 		await newFamilyMessage.save();
 
 		//Emit to family sockets
-		const familnameId = await getFamilyById(familyInfo.id);
-		const normalizedIds = [userId, familnameId].sort();
+		const normalizedIds = [userId,'family', familyId].sort();
 		const familyDmChat = normalizedIds.join("");
 
 		io.to(familyDmChat).emit("family chat message", {
+			
 			sender: senderId,
 			receiver: familyInfo.name,
 			message: decryptMessage(content),
