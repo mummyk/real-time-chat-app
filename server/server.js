@@ -512,51 +512,6 @@ router.post("/messages", async (req, res) => {
 	}
 });
 
-router.get("/last-messages", async (req, res) => {
-  try {
-    const receiverId = req.receiverInfo.id;
-    const senderId = req.senderInfo.id;
-
-    // Adjusted query to get the latest messages with a limit of 1
-    const messages = await Message.find({
-      $or: [
-        { sender: senderId, receiver: receiverId },
-        { sender: receiverId, receiver: senderId },
-      ],
-    })
-      .sort({ timestamp: -1 }) // Sort messages by timestamp in descending order
-      .limit(1); // Limit the result to the latest message
-
-    const profile_pics = await getUserById(receiverId).then((data) => {
-		const profile = data.profile_picture;
-		return profile;
-		
-	});
-
-
-
-    const formattedMessages = messages.map((message) => {
-      return {
-	ids: message.ids,
-	types: message.type,
-        sender: message.sender,
-        receiver: message.receiver,
-	profile_picture: profile_pics,
-        content: decryptMessage(message.message), // Decrypt the message content
-        timestamp: message.timestamp,
-      };
-    });
-
-    res.json(formattedMessages);
-  } catch (err) {
-    console.error("Error retrieving messages:", err);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-});
-
-
-
-
 /***************************************** END *****************************************/
 
 /************************************* Family message **********************************/
@@ -719,7 +674,47 @@ router.post("/dynasty-messages", async (req, res) => {
 
 /*************************************** Get all messages and save to last massage db *******************/
 
+router.get("/last-messages", async (req, res) => {
+  try {
+    const receiverId = req.receiverInfo.id;
+    const senderId = req.senderInfo.id;
 
+    // Adjusted query to get the latest messages with a limit of 1
+    const messages = await Message.find({
+      $or: [
+        { sender: senderId, receiver: receiverId },
+        { sender: receiverId, receiver: senderId },
+      ],
+    })
+      .sort({ timestamp: -1 }) // Sort messages by timestamp in descending order
+      .limit(1); // Limit the result to the latest message
+
+    const profile_pics = await getUserById(receiverId).then((data) => {
+		const profile = data.profile_picture;
+		return profile;
+		
+	});
+
+
+
+    const formattedMessages = messages.map((message) => {
+      return {
+	ids: message.ids,
+	types: message.type,
+        sender: message.sender,
+        receiver: message.receiver,
+	profile_picture: profile_pics,
+        content: decryptMessage(message.message), // Decrypt the message content
+        timestamp: message.timestamp,
+      };
+    });
+
+    res.json(formattedMessages);
+  } catch (err) {
+    console.error("Error retrieving messages:", err);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
 
 /*************************************** END ******************************************/
 
