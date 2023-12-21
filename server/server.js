@@ -499,7 +499,7 @@ router.post("/messages", async (req, res) => {
 		// update the mychat list
 		const filter = const filter = {
 			      $or: [
-			        { sender: senderId, receiver: receiverId, types:"single" },
+			        { owner: senderId, connect: receiverId, types:"single" },
 			        { sender: receiverId, receiver: senderId, types:"single" },
 			      ],
 			    };
