@@ -452,7 +452,7 @@ router.get("/messages", async (req, res) => {
 
 		const formattedMessages = messages.map((message) => {
 			return {
-				ids: message.ids;
+				ids: message.ids,
 				sender: message.sender,
 				receiver: message.receiver,
 				message: decryptMessage(message.message), // Decrypt the message content
