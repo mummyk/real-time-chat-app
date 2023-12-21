@@ -538,6 +538,7 @@ router.get("/last-messages", async (req, res) => {
     const formattedMessages = messages.map((message) => {
       return {
 	ids: message.ids,
+	types: message.type,
         sender: message.sender,
         receiver: message.receiver,
 	profile_picture: profile_pics,
@@ -575,6 +576,8 @@ router.get("/family-messages", async (req, res) => {
 
 		const formattedMessages = messages.map((message) => {
 			return {
+				ids: message.ids,
+				types: message.type,
 				sender: message.sender,
 				receiver: message.receiver,
 				content: decryptMessage(message.message), // Decrypt the message content
@@ -597,15 +600,15 @@ router.post("/family-messages", async (req, res) => {
 
 	try {
 		const senderInfo = req.senderInfo;
-		const receiverInfo = req.receiverInfo;
 		const familyInfo = req.familyDetails;
 
 		const senderId = senderInfo.id;
-		const receiverId = receiverInfo.id;
 		const familyId = familyInfo.id;
 		const content = encryptMessage(req.body.message);
 
 		const newFamilyMessage = new FamilyMessage({
+			ids: `${parseInt(senderId, 10) + parseInt(familyId, 10)}`,
+			types: "family",
 			sender: senderId,
 			message: content,
 			receiver: familyId,
@@ -619,7 +622,8 @@ router.post("/family-messages", async (req, res) => {
 		const familyDmChat = normalizedIds.join("");
 
 		io.to(familyDmChat).emit("family chat message", {
-			
+			ids: message.ids,
+			types: message.type,
 			sender: senderId,
 			receiver: familyInfo.name,
 			message: decryptMessage(content),
