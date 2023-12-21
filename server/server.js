@@ -512,11 +512,21 @@ router.post("/messages", async (req, res) => {
 			      },
 			    };
 		// Use updateOne to replace the document with the new data
-		const result = await collection.updateOne(filter, replacement);
+		const result = await MyChatList.updateOne(filter, replacement);
 		
 		if (result.modifiedCount > 0) {
-		      console.log(`User updated successfully.`);
+		      console.log(`last chat list updated successfully.`);
 		} else {
+			const newMyChatList = new MyChatList({
+			owner: senderId,
+			connect: receiverId,
+			type: "single",
+			profile_picture : "",
+			message: content,// Change the type to Mixed
+			timestamp: Date.now(),
+		});
+
+		await newMyChatList.save();
 		      console.log(`User not found.`);
 		}
 
@@ -703,15 +713,7 @@ router.get("/last-messages", async (req, res) => {
   try {
     const senderId = req.senderInfo.id;
 
-    // Adjusted query to get the latest messages with a limit of 1
-    const messages = await Message.find({
-      $or: [
-        { sender: senderId},
-        { sender: receiverId},
-      ],
-    })
-      .sort({ timestamp: -1 }) // Sort messages by timestamp in descending order
-      .limit(1); // Limit the result to the latest message
+    const messages = await Message.find({});
 
     const formattedMessages = messages.map((message) => {
 	const profile_pics = await getUserById(parseInt(message.receiver, 10)).then((data) => {
