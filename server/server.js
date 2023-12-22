@@ -718,18 +718,18 @@ router.get("/last-messages-list", async (req, res) => {
     const senderId = req.senderInfo.id;
 
     const messages = await MyChatList.find({$or: [
-			        { sender: senderId},
-			        { receiver: senderId},
-			      ],
-			});
+                                { owner: senderId},
+                                { connect: senderId},
+                              ],
+                        })sort({ timestamp: -1 }).limit(1);
 
     const formattedMessages = messages.map((message) => {
       return {
-	ids: message.ids,
-	types: message.type,
-        sender: message.sender,
-        receiver: message.receiver,
-	profile_picture: profile_pics,
+        ids: message.ids,
+        types: message.type,
+        owner: message.owner,
+        connect: message.connect,
+        profile_picture: message.profile_picture,
         content: decryptMessage(message.message), // Decrypt the message content
         timestamp: message.timestamp,
       };
