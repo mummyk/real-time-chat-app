@@ -734,7 +734,8 @@ router.get("/last-messages-list", async (req, res) => {
         types: message.type,
         owner: message.owner,
         connect: message.connect,
-        profile_picture: message.profile_picture,
+        profile_picture_sender : message.profile_picture_sender,
+        profile_picture_reciever: message.profile_picture_reciever,
         content: decryptMessage(message.message), // Decrypt the message content
         timestamp: message.timestamp,
       };
