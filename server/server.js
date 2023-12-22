@@ -497,34 +497,42 @@ router.post("/messages", async (req, res) => {
 
                 await newMessage.save();
 
-		 // update the mychat list
+		const profile_pics_sender = await getUserById(parseInt(senderId, 10)).then((data) =>{
+                                return data.profile_picture;
+                        });
+
+                const profile_pics_reciever = await getUserById(parseInt(receiverId,10)).then((data) =>{
+                                return data.profile_picture;
+                        });
+                // update the mychat list
                 const filter = {
                               $or: [
-                                { owner: senderId, connect: receiverId, types:"single" },
-                                { owner: receiverId, connect: senderId, types:"single" },
+                                { owner: senderId, connect: receiverId, type:"single" },
+                                { owner: receiverId, connect: senderId, type:"single" },
                               ],
                             };
                 const replacement = {
                               // Include the fields you want to update and their new values
                               // For example, updating the 'message' field
                               $set: {
+                                owner: senderId,
+                                connect: receiverId,
                                 message: content,
+                                profile_picture_sender : profile_pics_sender,
+                                profile_picture_reciever : profile_pics_reciever,
                                 // Include other fields to update as needed
                               },
                             };
                 // Use updateOne to replace the document with the new data
-                const result = await MyChatList.updateMany(filter, replacement);
+                try {
+			  // Use updateOne to replace the document with the new data
+                        const result = await MyChatList.updateOne(filter, replacement);
 
-                if (result.modifiedCount > 0) {
-                      console.log(`last chat list updated successfully.`);
-                } else {
-                        const profile_pics = await getUserById(parseInt(receiverId, 10)).then((data) => {
-                                const profile = data.profile_picture;
-                                return profile;
-                        });const profile_pics_reciever = await getUserById(parseInt(receiverId,10)).then((data) =>{
-                                const profile = data.profile_picture;
-                                return profile;
-                        });
+                        console.log('Update Result:', result);
+
+                        if (result.modifiedCount > 0) {
+                                console.log('Last chat list updated successfully.');
+                        } else {
                         const newMyChatList = new MyChatList({
                         owner: senderId,
                         connect: receiverId,
@@ -535,9 +543,14 @@ router.post("/messages", async (req, res) => {
                         timestamp: Date.now(),
                 });
 
-                await newMyChatList.updateMany();
-                      console.log(`Modification carried out`);
-                }
+                await newMyChatList.save();
+                      console.log(`Saved new data did not update`);
+
+                                console.log('No documents matched the filter criteria.');
+                        }
+                        } catch (error) {
+                                console.error('Error during update:', error);
+                        }
 
 
                 io.to(dmChat).emit("privateMessage", {
