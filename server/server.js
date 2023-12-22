@@ -468,87 +468,87 @@ router.get("/messages", async (req, res) => {
 });
 
 router.post("/messages", async (req, res) => {
-	// Check if the socket initialization has occurred
-	if (!isSocketInitialized) {
-		return res.status(500).json({ message: "Socket not initialized yet" });
-	}
+        // Check if the socket initialization has occurred
+        if (!isSocketInitialized) {
+                return res.status(500).json({ message: "Socket not initialized yet" });
+        }
 
-	try {
-		const senderInfo = req.senderInfo;
-		const receiverInfo = req.receiverInfo;
+        try {
+                const senderInfo = req.senderInfo;
+                const receiverInfo = req.receiverInfo;
 
-		const senderId = senderInfo.id;
-		const receiverId = receiverInfo.id;
-		const content = encryptMessage(req.body.message);
+                const senderId = senderInfo.id;
+                const receiverId = receiverInfo.id;
+                const content = encryptMessage(req.body.message);
 
-		// Emit the message to the DM room
-		const normalizedIds = [senderId, "single", receiverId].sort();
-		const dmChat = normalizedIds.join("");
+                // Emit the message to the DM room
+                const normalizedIds = [senderId, "single", receiverId].sort();
+                const dmChat = normalizedIds.join("");
 
-		const newMessage = new Message({
-			ids: `${parseInt(senderId, 10) + parseInt(receiverId, 10)}`,
-			types: "single",
-			sender: senderId,
-			message: content,
-			receiver: receiverId,
-			timestamp: Date.now(),
-		});
+                const newMessage = new Message({
+                        ids: `${parseInt(senderId, 10) + parseInt(receiverId, 10)}`,
+                        types: "single",
+                        sender: senderId,
+                        message: content,
+                        receiver: receiverId,
+                        timestamp: Date.now(),
+                });
 
-		await newMessage.save();
-		
-		// update the mychat list
-		const filter = {
-			      $or: [
-			        { owner: senderId, connect: receiverId, types:"single" },
-			        { sender: receiverId, receiver: senderId, types:"single" },
-			      ],
-			    };
-		const replacement = {
-			      // Include the fields you want to update and their new values
-			      // For example, updating the 'message' field
-			      $set: {
-			        message: content,
-			        // Include other fields to update as needed
-			      },
-			    };
-		// Use updateOne to replace the document with the new data
-		const result = await MyChatList.updateOne(filter, replacement);
-		
-		if (result.modifiedCount > 0) {
-		      console.log(`last chat list updated successfully.`);
-		} else {
-			const profile_pics = await getUserById(parseInt(message.receiver, 10)).then((data) => {
-				const profile = data.profile_picture;
-				return profile;
-			});
-			const newMyChatList = new MyChatList({
-			owner: senderId,
-			connect: receiverId,
-			type: "single",
-			profile_picture : profile_pics,
+                await newMessage.save();
+
+		 // update the mychat list
+                const filter = {
+                              $or: [
+                                { owner: senderId, connect: receiverId, types:"single" },
+                                { owner: receiverId, connect: senderId, types:"single" },
+                              ],
+                            };
+                const replacement = {
+                              // Include the fields you want to update and their new values
+                              // For example, updating the 'message' field
+                              $set: {
+                                message: content,
+                                // Include other fields to update as needed
+                              },
+                            };
+                // Use updateOne to replace the document with the new data
+                const result = await MyChatList.updateMany(filter, replacement);
+
+                if (result.modifiedCount > 0) {
+                      console.log(`last chat list updated successfully.`);
+                } else {
+                        const profile_pics = await getUserById(parseInt(receiverId, 10)).then((data) => {
+                                const profile = data.profile_picture;
+                                return profile;
+                        });
+                        const newMyChatList = new MyChatList({
+                        owner: senderId,
+                        connect: receiverId,
+                        type: "single",
+                        profile_picture : profile_pics,
 			message: content,// Change the type to Mixed
-			timestamp: Date.now(),
-		});
+                        timestamp: Date.now(),
+                });
 
-		await newMyChatList.save();
-		      console.log(`User not found.`);
-		}
+                await newMyChatList.updateMany();
+                      console.log(`Modification carried out`);
+                }
 
-		
-		io.to(dmChat).emit("privateMessage", {
-			ids: `${parseInt(senderId, 10) + parseInt(receiverId, 10)}`,
-			types: "single",
-			sender: senderId,
-			receiver: receiverId,
-			message: decryptMessage(content),
-			timestamp: newMessage.timestamp, // Include the timestamp in the emitted message
-		});
 
-		res.sendStatus(200);
-	} catch (err) {
-		console.error("Error posting message:", err);
-		res.status(500).json({ message: "Internal Server Error" });
-	}
+                io.to(dmChat).emit("privateMessage", {
+                        ids: `${parseInt(senderId, 10) + parseInt(receiverId, 10)}`,
+                        types: "single",
+                        sender: senderId,
+                        receiver: receiverId,
+                        message: decryptMessage(content),
+                        timestamp: newMessage.timestamp, // Include the timestamp in the emitted message
+                });
+
+                res.sendStatus(200);
+        } catch (err) {
+                console.error("Error posting message:", err);
+                res.status(500).json({ message: "Internal Server Error" });
+        }
 });
 
 /***************************************** END *****************************************/
