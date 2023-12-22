@@ -300,7 +300,8 @@ const MyChatList = mongoose.model("MyChatList", {
 	owner: String,
 	connect: String,
 	type: String,
-	profile_picture : String,
+	profile_picture_sender : String,
+        profile_picture_reciever: String,
 	message: mongoose.Schema.Types.Mixed,// Change the type to Mixed
 	timestamp: {
 		type: Date,
@@ -520,13 +521,17 @@ router.post("/messages", async (req, res) => {
                         const profile_pics = await getUserById(parseInt(receiverId, 10)).then((data) => {
                                 const profile = data.profile_picture;
                                 return profile;
+                        });const profile_pics_reciever = await getUserById(parseInt(receiverId,10)).then((data) =>{
+                                const profile = data.profile_picture;
+                                return profile;
                         });
                         const newMyChatList = new MyChatList({
                         owner: senderId,
                         connect: receiverId,
                         type: "single",
-                        profile_picture : profile_pics,
-			message: content,// Change the type to Mixed
+                        profile_picture_sender : profile_pics_sender,
+                        profile_picture_reciever : profile_pics_reciever,
+                        message: content,// Change the type to Mixed
                         timestamp: Date.now(),
                 });
 
