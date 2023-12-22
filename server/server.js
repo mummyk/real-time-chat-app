@@ -721,7 +721,7 @@ router.get("/last-messages-list", async (req, res) => {
                                 { owner: senderId},
                                 { connect: senderId},
                               ],
-                        })sort({ timestamp: -1 }).limit(1);
+                        }).sort({ timestamp: -1 }).limit(1);
 
     const formattedMessages = messages.map((message) => {
       return {
