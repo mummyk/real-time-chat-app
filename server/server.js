@@ -160,7 +160,7 @@ io.on("connection", (socket) => {
 				throw error; // Re-throw the error
 			});
 
-		// Get usert dynasty
+		// Get user dynasty
 		fetch(
 			`https://dev.fatherlandancestry.com/api/v1/joined-dynasty/${userId}`,
 			{
@@ -761,8 +761,61 @@ router.post("/dynasty-messages", async (req, res) => {
 		});
 
 		await newFamilyMessage.save();
+		const profile_pics_sender = await getUserById(parseInt(senderId, 10)).then((data) =>{
+                                return data.profile_picture;
+                        });
 
-		//Emit to family sockets
+                const profile_pics_reciever = await getUserById(parseInt(receiverId,10)).then((data) =>{
+                                return data.profile_picture;
+                        });
+                // update the mychat list
+                const filter = {
+                              $or: [
+                                { owner: senderId, connect: dynastyId, type:"dynasty" },
+                                { owner: dynastyId, connect: senderId, type:"dynasty" },
+                              ],
+                            };
+                const replacement = {
+                              // Include the fields you want to update and their new values
+                              // For example, updating the 'message' field
+                              $set: {
+                                owner: senderId,
+                                connect: dynastyId,
+                                message: content,
+                                profile_picture_sender : profile_pics_sender,
+                                profile_picture_reciever : profile_pics_reciever,
+                                // Include other fields to update as needed
+                              },
+                            };
+                // Use updateOne to replace the document with the new data
+               try {
+                         // Use updateOne to replace the document with the new data
+                        const result = await MyChatList.updateOne(filter, replacement);
+
+                        console.log('Update Result:', result);
+
+                        if (result.modifiedCount > 0) {
+                                console.log('Last chat list updated successfully.');
+                        } else {
+                        const newMyChatList = new MyChatList({
+                        owner: senderId,
+                        connect: dynastyId,
+                        type: "dynasty",
+                        profile_picture_sender : profile_pics_sender,
+                        profile_picture_reciever : profile_pics_reciever,
+                        message: content,// Change the type to Mixed
+                        timestamp: Date.now(),
+                });
+
+                await newMyChatList.save();
+                      console.log(`Saved new data did not update`);
+                                console.log('No documents matched the filter criteria.');
+                        }
+                        } catch (error) {
+                                console.error('Error during update:', error);
+                        }
+
+		//Emit to dynasty sockets
 		const normalizedIds = [userId, dynastyId].sort();
 		const familyDmChat = normalizedIds.join("");
 
