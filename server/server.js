@@ -12,10 +12,10 @@ const app = express();
 const router = express.Router();
 const server = http.createServer(app);
 const io = socketIo(server, {
-	cors: {
-		origin: "http://localhost:8080", // Allow requests from this origin
-		methods: ["GET", "POST"],
-	},
+        cors: {
+                origin: "http://localhost:8080", // Allow requests from this origin
+                methods: ["GET", "POST"],
+        },
 });
 app.use(cors());
 app.use(bodyParser.json());
@@ -446,14 +446,15 @@ router.get("/messages", async (req, res) => {
 		const senderId = req.senderInfo.id;
 		const messages = await Message.find({
 			$or: [
-				{ sender: senderId, receiver: receiverId },
-				{ sender: receiverId, receiver: senderId },
+				{ sender: senderId, receiver: receiverId, type: "single" },
+				{ sender: receiverId, receiver: senderId, type: "single" },
 			],
 		}).sort({ timestamp: 1 }); // Sort messages by timestamp in ascending order
 
 		const formattedMessages = messages.map((message) => {
 			return {
 				ids: message.ids,
+				type: message.type,
 				sender: message.sender,
 				receiver: message.receiver,
 				message: decryptMessage(message.message), // Decrypt the message content
@@ -495,9 +496,8 @@ router.post("/messages", async (req, res) => {
                         timestamp: Date.now(),
                 });
 
-                await newMessage.save();
-
-		const profile_pics_sender = await getUserById(parseInt(senderId, 10)).then((data) =>{
+               await newMessage.save();
+                const profile_pics_sender = await getUserById(parseInt(senderId, 10)).then((data) =>{
                                 return data.profile_picture;
                         });
 
@@ -524,8 +524,8 @@ router.post("/messages", async (req, res) => {
                               },
                             };
                 // Use updateOne to replace the document with the new data
-                try {
-			  // Use updateOne to replace the document with the new data
+               try {
+                         // Use updateOne to replace the document with the new data
                         const result = await MyChatList.updateOne(filter, replacement);
 
                         console.log('Update Result:', result);
@@ -545,15 +545,13 @@ router.post("/messages", async (req, res) => {
 
                 await newMyChatList.save();
                       console.log(`Saved new data did not update`);
-
                                 console.log('No documents matched the filter criteria.');
                         }
                         } catch (error) {
                                 console.error('Error during update:', error);
                         }
 
-
-                io.to(dmChat).emit("privateMessage", {
+                 io.to(dmChat).emit("privateMessage", {
                         ids: `${parseInt(senderId, 10) + parseInt(receiverId, 10)}`,
                         types: "single",
                         sender: senderId,
@@ -604,49 +602,104 @@ router.get("/family-messages", async (req, res) => {
 	}
 });
 
+
 router.post("/family-messages", async (req, res) => {
-	// Check if the socket initialization has occurred
-	if (!isSocketInitialized) {
-		return res.status(500).json({ message: "Socket not initialized yet" });
-	}
+        // Check if the socket initialization has occurred
+        if (!isSocketInitialized) {
+                return res.status(500).json({ message: "Socket not initialized yet" });
+        }
 
-	try {
-		const senderInfo = req.senderInfo;
-		const familyInfo = req.familyDetails;
+        try {
+                const senderInfo = req.senderInfo;
+                const familyInfo = req.familyDetails;
 
-		const senderId = senderInfo.id;
-		const familyId = familyInfo.id;
-		const content = encryptMessage(req.body.message);
+                const senderId = senderInfo.id;
+                const familyId = familyInfo.id;
+                const content = encryptMessage(req.body.message);
 
-		const newFamilyMessage = new FamilyMessage({
-			ids: `${parseInt(senderId, 10) + parseInt(familyId, 10)}`,
-			types: "family",
-			sender: senderId,
-			message: content,
-			receiver: familyId,
-			timestamp: Date.now(),
-		});
+                const newFamilyMessage = new FamilyMessage({
+                        ids: `${parseInt(senderId, 10) + parseInt(familyId, 10)}`,
+                        types: "family",
+                        sender: senderId,
+                        message: content,
+                        receiver: familyId,
+                        timestamp: Date.now(),
+                });
 
-		await newFamilyMessage.save();
+                await newFamilyMessage.save();
+		const profile_pics_sender = await getUserById(parseInt(senderId, 10)).then((data) =>{
+                                return data.profile_picture;
+                        });
 
-		//Emit to family sockets
-		const normalizedIds = [userId,'family', familyId].sort();
-		const familyDmChat = normalizedIds.join("");
+                const profile_pics_reciever = await getUserById(parseInt(receiverId,10)).then((data) =>{
+                                return data.profile_picture;
+                        });
+                // update the mychat list
+                const filter = {
+                              $or: [
+                                { owner: senderId, connect: familyId, type:"family" },
+                                { owner: familyId, connect: senderId, type:"family" },
+                              ],
+                            };
+                const replacement = {
+                              // Include the fields you want to update and their new values
+                              // For example, updating the 'message' field
+                              $set: {
+                                owner: senderId,
+                                connect: familyId,
+                                message: content,
+                                profile_picture_sender : profile_pics_sender,
+                                profile_picture_reciever : profile_pics_reciever,
+                                // Include other fields to update as needed
+                              },
+                            };
+                // Use updateOne to replace the document with the new data
+               try {
+                         // Use updateOne to replace the document with the new data
+                        const result = await MyChatList.updateOne(filter, replacement);
 
-		io.to(familyDmChat).emit("family chat message", {
-			ids: `${parseInt(senderId, 10) + parseInt(familyId, 10)}`,
-			types: "family",
-			sender: senderId,
-			receiver: familyInfo.name,
-			message: decryptMessage(content),
-			timestamp: newFamilyMessage.timestamp, // Include the timestamp in the emitted message
-		});
+                        console.log('Update Result:', result);
 
-		res.sendStatus(200);
-	} catch (err) {
-		console.error("Error posting message:", err);
-		res.status(500).json({ message: "Internal Server Error" });
-	}
+                        if (result.modifiedCount > 0) {
+                                console.log('Last chat list updated successfully.');
+                        } else {
+                        const newMyChatList = new MyChatList({
+                        owner: senderId,
+                        connect: familyId,
+                        type: "family",
+                        profile_picture_sender : profile_pics_sender,
+                        profile_picture_reciever : profile_pics_reciever,
+                        message: content,// Change the type to Mixed
+                        timestamp: Date.now(),
+                });
+
+                await newMyChatList.save();
+                      console.log(`Saved new data did not update`);
+                                console.log('No documents matched the filter criteria.');
+                        }
+                        } catch (error) {
+                                console.error('Error during update:', error);
+                        }
+
+
+                //Emit to family sockets
+                const normalizedIds = [userId,'family', familyId].sort();
+                const familyDmChat = normalizedIds.join("");
+
+                io.to(familyDmChat).emit("family chat message", {
+                        ids: `${parseInt(senderId, 10) + parseInt(familyId, 10)}`,
+                        types: "family",
+                        sender: senderId,
+                        receiver: familyId,
+                        message: decryptMessage(content),
+                        timestamp: newFamilyMessage.timestamp, // Include the timestamp in the emitted message
+                });
+
+                res.sendStatus(200);
+        } catch (err) {
+                console.error("Error posting message:", err);
+                res.status(500).json({ message: "Internal Server Error" });
+        }
 });
 
 /***************************************** END *****************************************/
